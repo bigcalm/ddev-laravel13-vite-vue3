@@ -98,54 +98,22 @@ DDEV runs Mailpit inside the web container. It captures outgoing mail on SMTP po
 
 ## Step 5: Configure Vite for DDEV
 
-The starter kit generates `vite.config.ts`. Add the DDEV-specific server settings:
+The starter kit generates `vite.config.ts` with `fmt`, `lint`, and `watch` settings that `npm run build` and `npm run check` use. Keep that file and add the DDEV settings to the existing `server` object, before `watch`:
 
 ```ts
-import inertia from '@inertiajs/vite';
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
-import tailwindcss from '@tailwindcss/vite';
-import vue from '@vitejs/plugin-vue';
-import laravel from 'laravel-vite-plugin';
-import { bunny } from 'laravel-vite-plugin/fonts';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-    plugins: [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.ts'],
-            refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-            ],
-        }),
-        inertia(),
-        tailwindcss(),
-        vue({
-            template: {
-                transformAssetUrls: {
-                    base: null,
-                    includeAbsolute: false,
-                },
-            },
-        }),
-        wayfinder({
-            formVariants: true,
-        }),
-    ],
-    server: {
-        host: "0.0.0.0",
+        host: '0.0.0.0',
         port: 5173,
         strictPort: true,
         origin: `${process.env.DDEV_PRIMARY_URL_WITHOUT_PORT}:5173`,
         allowedHosts: ['.ddev.site'],
         cors: {
-            origin: /https?:\/\/([A-Za-z0-9\-\.]+)?(\.ddev\.site)(?::\d+)?$/,
+            origin: /https?:\/\/([A-Za-z0-9\-.]+)?(\.ddev\.site)(?::\d+)?$/,
         },
-    },
-});
 ```
+
+Also add `.ddev/**` to the `fmt.ignorePatterns` list. DDEV owns the files under `.ddev` and writes its own YAML style, so `vp` must not format them.
+
+Do not replace the generated file. It imports `defineConfig` and `lazyPlugins` from `vite-plus`, and the `lint` and `fmt` settings in it drive `composer ci:check`.
 
 `allowedHosts` is required for Vite 8+ - it blocks requests with unknown `Host` headers, but DDEV's proxy forwards the real domain, not `localhost`.
 
