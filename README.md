@@ -126,6 +126,18 @@ ddev composer run dev
 
 Visit the site at `https://my-vue-site.ddev.site`. You should see the Laravel welcome page with authentication - login, register, and dashboard routes are all functional.
 
+## Step 7: Hand the project to the next developer
+
+`quick-start.sh` writes `setup.sh` and a `README.md` into the new project. Another developer clones the project and runs one command:
+
+```bash
+./setup.sh
+```
+
+The script starts DDEV, configures MariaDB and Mailpit, installs Composer and npm dependencies, generates the application key, runs migrations, and builds the frontend. It is safe to run again: it keeps an existing `.env` and application key.
+
+The starter kit does not ship a `README.md`, so `quick-start.sh` creates one with these steps. If you set the project up by hand, add the same two files from the generated project, or run `./quick-start.sh` on a throwaway name and copy them.
+
 ## Troubleshooting
 
 - **Firefox cert errors**: Run `mkcert -install` on the host, then import the CA into Firefox (`about:config` → `security.enterprise_roots.enabled = true`). See the [DDEV browser config guide](https://docs.ddev.com/en/stable/users/install/configuring-browsers/).

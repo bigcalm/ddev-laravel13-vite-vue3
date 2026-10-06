@@ -18,7 +18,7 @@ ok()    { echo -e "${GREEN}✓${NC} $*"; }
 fail()  { echo -e "${RED}✗${NC} $*"; exit 1; }
 
 PROJECT_NAME="${1:-}"
-TOTAL=7
+TOTAL=8
 
 if [ -z "$PROJECT_NAME" ]; then
     echo "Usage: $0 <project-name>"
@@ -152,9 +152,146 @@ step 6 "Build frontend assets"
 ddev npm run build
 ok "Frontend built"
 
+# --- Step 7 ---
+step 7 "Add the setup script and getting-started docs"
+cat > setup.sh << 'SETUPEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+BOLD='\033[1m'
+DIM='\033[2m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+if [ ! -t 1 ] || [ -n "${NO_COLOR:-}" ]; then
+    BOLD='' DIM='' GREEN='' RED='' NC=''
+fi
+
+info() { echo -e "${DIM}[info]${NC} $*"; }
+step() { echo -e "\n${BOLD}[$1/$TOTAL]${NC} $2"; }
+ok()   { echo -e "${GREEN}✓${NC} $*"; }
+fail() { echo -e "${RED}✗${NC} $*"; exit 1; }
+
+cd "$(dirname "$0")"
+
+TOTAL=7
+
+command -v ddev &>/dev/null || fail "ddev is not installed — see https://ddev.com/get-started"
+command -v docker &>/dev/null || fail "docker is not installed."
+docker info &>/dev/null || fail "docker daemon is not running."
+
+PROJECT_NAME="$(grep -E '^name:' .ddev/config.yaml | head -1 | awk '{print $2}')"
+[ -n "$PROJECT_NAME" ] || PROJECT_NAME="$(basename "$PWD")"
+
+info "Project: $PROJECT_NAME"
+
+step 1 "Start DDEV"
+ddev start
+ok "DDEV is running"
+
+step 2 "Configure the environment"
+if [ -f .env ]; then
+    info ".env already exists, leaving it unchanged"
+else
+    cp .env.example .env
+    sed -i \
+      -e "s|^APP_URL=.*|APP_URL=https://${PROJECT_NAME}.ddev.site|" \
+      -e 's/DB_CONNECTION=sqlite/DB_CONNECTION=mariadb/' \
+      -e 's/# DB_HOST=127.0.0.1/DB_HOST=db/' \
+      -e 's/# DB_PORT=3306/DB_PORT=3306/' \
+      -e 's/# DB_DATABASE=laravel/DB_DATABASE=db/' \
+      -e 's/# DB_USERNAME=root/DB_USERNAME=db/' \
+      -e 's/# DB_PASSWORD=/DB_PASSWORD=db/' \
+      -e 's/MAIL_MAILER=log/MAIL_MAILER=smtp/' \
+      -e 's/MAIL_PORT=2525/MAIL_PORT=1025/' \
+      .env
+    ok "Created .env for DDEV (MariaDB and Mailpit)"
+fi
+
+step 3 "Install PHP dependencies"
+ddev composer install
+ok "Composer dependencies installed"
+
+step 4 "Generate the application key"
+if grep -qE '^APP_KEY=base64:' .env; then
+    info "Application key already set"
+else
+    ddev artisan key:generate
+    ok "Application key generated"
+fi
+
+step 5 "Run database migrations"
+ddev artisan migrate --force
+ok "Database migrated"
+
+step 6 "Install and build the frontend"
+ddev npm install
+ddev npm run build
+ok "Frontend built"
+
+step 7 "Finished"
+echo ""
+echo -e "${GREEN}${BOLD}Setup complete!${NC}"
+echo ""
+echo -e "  ${BOLD}Start development:${NC}"
+echo "    ddev composer run dev"
+echo ""
+echo -e "  ${BOLD}Open in browser:${NC}"
+echo "    https://${PROJECT_NAME}.ddev.site"
+echo ""
+echo -e "  ${BOLD}View captured email in Mailpit:${NC}"
+echo "    https://${PROJECT_NAME}.ddev.site:8026"
+echo "    ddev mailpit"
+echo ""
+SETUPEOF
+chmod +x setup.sh
+
+TMP_README="$(mktemp)"
+cat > "$TMP_README" << 'READMEEOF'
+## Getting Started
+
+This project was bootstrapped with [bigcalm/ddev-laravel13-vite-vue3](https://github.com/bigcalm/ddev-laravel13-vite-vue3).
+
+This project runs on DDEV. You need Docker and DDEV installed.
+
+```bash
+./setup.sh
+```
+
+The script starts DDEV, configures MariaDB and Mailpit, installs Composer and npm dependencies, generates the application key, runs migrations, and builds the frontend.
+
+Then start the development servers:
+
+```bash
+ddev composer run dev
+```
+
+- App: https://__PROJECT_NAME__.ddev.site
+- Mailpit: https://__PROJECT_NAME__.ddev.site:8026 (`ddev mailpit`)
+READMEEOF
+sed -i "s/__PROJECT_NAME__/${PROJECT_NAME}/g" "$TMP_README"
+
+if [ -f README.md ]; then
+    if grep -q '^## Getting Started' README.md; then
+        info "README.md already has a Getting Started section"
+    else
+        { head -n 1 README.md; echo; cat "$TMP_README"; tail -n +2 README.md; } > README.md.new
+        mv README.md.new README.md
+    fi
+else
+    {
+        echo "# ${PROJECT_NAME}"
+        echo
+        cat "$TMP_README"
+    } > README.md
+fi
+rm -f "$TMP_README"
+ok "setup.sh and README ready for the next developer"
+
 # --- Done ---
 trap - ERR
-step 7 "Finished"
+step 8 "Finished"
 echo ""
 echo -e "${GREEN}${BOLD}Project '${PROJECT_NAME}' is ready!${NC}"
 echo ""
