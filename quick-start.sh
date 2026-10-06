@@ -267,7 +267,7 @@ Then start the development servers:
 ddev composer run dev
 ```
 
-- App: https://__PROJECT_NAME__.ddev.site
+- App: https://__PROJECT_NAME__.ddev.site (`ddev launch`)
 - Mailpit: https://__PROJECT_NAME__.ddev.site:8026 (`ddev mailpit`)
 READMEEOF
 sed -i "s/__PROJECT_NAME__/${PROJECT_NAME}/g" "$TMP_README"
