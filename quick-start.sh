@@ -67,7 +67,7 @@ ddev exec "sed -i 's|APP_URL=http://localhost:8000|APP_URL=https://${PROJECT_NAM
 ok "Laravel project scaffolded"
 
 # --- Step 4 ---
-step 4 "Configure database for DDEV MariaDB"
+step 4 "Configure database and email for DDEV"
 ddev exec sed -i \
   -e 's/DB_CONNECTION=sqlite/DB_CONNECTION=mariadb/' \
   -e 's/# DB_HOST=127.0.0.1/DB_HOST=db/' \
@@ -75,9 +75,11 @@ ddev exec sed -i \
   -e 's/# DB_DATABASE=laravel/DB_DATABASE=db/' \
   -e 's/# DB_USERNAME=root/DB_USERNAME=db/' \
   -e 's/# DB_PASSWORD=/DB_PASSWORD=db/' \
+  -e 's/MAIL_MAILER=log/MAIL_MAILER=smtp/' \
+  -e 's/MAIL_PORT=2525/MAIL_PORT=1025/' \
   .env
 ddev artisan migrate
-ok "Database configured and migrated"
+ok "Database configured, migrated, and email routed to Mailpit"
 
 # --- Step 5 ---
 step 5 "Configure Vite for DDEV"
@@ -152,3 +154,7 @@ echo "    ddev npm run dev"
 echo ""
 echo "  ${BOLD}Open in browser:${NC}"
 echo "    https://${PROJECT_NAME}.ddev.site"
+echo ""
+echo "  ${BOLD}View captured email in Mailpit:${NC}"
+echo "    https://${PROJECT_NAME}.ddev.site:8026"
+echo "    ddev mailpit"
